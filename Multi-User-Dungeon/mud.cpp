@@ -1,7 +1,4 @@
-// lab.cpp
 // The program reads in a textfile and structures a MUD game based on the text.
-// Dong Jun Woun
-// 01/28/2021
 #include <iostream>
 #include<string>
 #include<sstream>
