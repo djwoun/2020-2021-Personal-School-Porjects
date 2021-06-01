@@ -1,0 +1,240 @@
+.data
+	arr:    .word 1, 2, 3, 4, 5,6,7,8,9
+	arr2:  .word 1, 2, 3
+	arr3: .word 0, 0, 0
+	val_array: .byte '|', 0, 12, 0, 5, 0, 0, 0, -1, -1, -1, -1,'&', 0, 12, 0, 5, 0, 0, 0, -1, -1, -1, -1,'^', 0, 12, 0, 5, 0, 0, 0, -1, -1, -1, -1,'~', 0, 12, 0, 5, 0, 0, 0, -1, -1, -1, -1, 'e', 0, 12, 0, 5, 0, 0, 0, -1, -1, -1, -1
+.text
+
+j main
+	
+	
+gofunc:
+	#int gofunc(values values[], int num_values);
+	
+	# iterator
+	move  $t0, $zero
+	
+	# return value (will add for each successful operation)
+	move  $v0, $zero
+	
+	# getfunc loop
+	gf_loop:
+	
+	# i <= number of operations expected
+	# the function ENDS when jumped to gf_loop_exit
+	bge $t0, $a1, gf_loop_exit
+	
+	# load number in array to temp register
+	# t1 will be the left number
+	# t2 will be the right number
+	# t3 will be the operator
+	lh $t1, 2($a0)
+	lh $t2, 4($a0)
+	lb $t3, 0($a0)
+	
+	# if t3 == op, jump
+	beq $t3, '&', AND
+	beq $t3, '|', OR
+	beq $t3, '^', XOR
+	beq $t3, '~', INVERT
+	
+	
+	# if none of the op match
+	# goes to break
+	j Break
+	
+	# performs each operation
+	# if successful adds 1 to the return 
+	#then jump to break (like switch)
+	AND:
+	and $t4, $t1, $t2
+	sw $t4, 8($a0)
+	add $v0, $v0, 1
+	j Break
+	OR:
+	or  $t4, $t1, $t2
+	sw $t4, 8($a0)
+	add $v0, $v0, 1
+	j Break
+	XOR:
+	xor $t4, $t1, $t2
+	sw $t4, 8($a0)
+	add $v0, $v0, 1
+	j Break
+	INVERT:
+	nor $t4, $t1, $t1
+	sw $t4, 8($a0)
+	add $v0, $v0, 1
+	j Break
+	
+	Break:
+	
+	# shift to the next set (struct is 12 bytes)
+	addi $a0, $a0, 12
+	
+	# add 1 to the counter
+	addi $t0, $t0, 1
+	
+	# for loop
+	j gf_loop
+	
+	gf_loop_exit:
+	# return	
+	jr $ra
+	
+	
+matmul:
+	# void matmul(Vector3& result, const Matrix3& mat, const Vector3& vec);
+	# outer forloop iterator
+	move  $t0, $zero
+	loopone:
+	
+	# inner forloop iterator
+	move  $t1, $zero
+	
+	# if the outer loop's iterator is 3 or greater, the loop breaks
+	bge $t0 , 3, loopone_end
+	
+	looptwo:
+	# if the inner loop's iterator is 3 or greater, the loop breaks
+	bge $t1 , 3, looptwo_end
+	
+	# get integers from the array 
+	# t4 result
+	# t2 mat
+	# t3 vec
+	lw    $t4, 0($a0)
+	lw    $t2, 0($a1)
+	lw    $t3, 0($a2)
+	
+	#multiply the two (ex. m11 x v1)
+	mul $t5, $t2, $t3
+	
+	# add the return and the multiplied
+	add $t4, $t4, $t5
+	
+	# store it in 3rd vector
+	sw  $t4, 0($a0)
+	
+	# shift to next 4 bytes
+	addi  $a1, $a1, 4
+	addi  $a2, $a2, 4
+	
+	# 2nd iterator++
+	addi $t1, $t1, 1
+	j looptwo
+
+	looptwo_end:
+	
+	# 1st iterator++
+	addi $t0, $t0, 1
+	
+	# shift to next 4 bytes for the result vector
+	# shift 12 bytes back from the multiplier vector
+	addi  $a0, $a0, 4
+	addi  $a2, $a2, -12
+	
+	j loopone
+	
+	loopone_end:
+	#return
+	jr $ra
+	
+	
+main:
+
+	la $a0, arr3
+	la $a1, arr
+	la $a2, arr2
+	jal matmul
+	
+	la $a0, arr3
+	
+	lw $t5, 0($a0)
+	addi $a0, $a0, 4
+	lw $t6, 0($a0)
+	addi $a0, $a0, 4
+	lw $t7, 0($a0)
+	addi $a0, $a0, 4
+	
+	li $v0, 1
+	move $a0, $t5
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t6
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t7
+	syscall
+	li    $v0, 11
+	li    $a0, '\n'
+	syscall
+
+
+
+
+	la $a0, val_array
+	li $a1, 4
+	jal gofunc
+	
+	la $a0, val_array
+	move $t0,$v0
+	lw $t1, 8($a0)
+	addi $a0, $a0, 12
+	lw $t2, 8($a0)
+	addi $a0, $a0, 12
+	lw $t3, 8($a0)
+	addi $a0, $a0, 12
+	lw $t4, 8($a0)
+	addi $a0, $a0, 12
+	
+	li $v0, 1
+	move $a0, $t0
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t1
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t2
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t3
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li $v0, 1
+	move $a0, $t4
+	syscall
+	li    $v0, 11
+	li    $a0, ' '
+	syscall
+	li    $v0, 11
+	li    $a0, '\n'
+	syscall
+	
+	
+
+	
+
+
+exit:
+# Exit from the program with code 0
+	li    $v0, 17
+	li    $a0, 0
+	syscall
